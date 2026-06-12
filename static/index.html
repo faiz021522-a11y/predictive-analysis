@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predictive Analytics & Forecasting Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- Vanilla CSS -->
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="logo-area">
+                <i data-lucide="line-chart" class="logo-icon animate-pulse"></i>
+                <h1>ForeSight<span>.ai</span></h1>
+            </div>
+            <div class="header-status">
+                <span class="status-indicator online"></span>
+                <span class="status-text">Server Online</span>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <div class="dashboard-layout">
+            
+            <!-- SIDEBAR: INPUT & CONTROLS -->
+            <aside class="sidebar card-panel">
+                <div class="sidebar-section">
+                    <h3><i data-lucide="database"></i> Data Source</h3>
+                    
+                    <div class="dataset-selector-group">
+                        <label for="dataset-select">Select Dataset</label>
+                        <select id="dataset-select" class="form-control">
+                            <option value="" disabled selected>Loading datasets...</option>
+                        </select>
+                    </div>
+
+                    <div class="upload-zone" id="upload-zone">
+                        <i data-lucide="upload-cloud" class="upload-icon"></i>
+                        <p>Drag & Drop CSV or <span>Browse</span></p>
+                        <input type="file" id="file-input" accept=".csv" style="display: none;">
+                    </div>
+                </div>
+
+                <!-- PREPROCESSING SECTION -->
+                <div class="sidebar-section" id="prep-section">
+                    <h3><i data-lucide="sliders"></i> Preprocessing</h3>
+                    
+                    <div class="prep-option">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="scale-features" checked>
+                            <span class="checkmark"></span>
+                            Standardize Features
+                        </label>
+                        <small class="help-text">Normalizes numeric features (StandardScaler)</small>
+                    </div>
+
+                    <div class="imputation-group">
+                        <label for="impute-strategy">Null Handling Strategy</label>
+                        <select id="impute-strategy" class="form-control">
+                            <option value="mean">Impute with Mean (Numeric)</option>
+                            <option value="median">Impute with Median (Numeric)</option>
+                            <option value="mode">Impute with Mode (Most Freq)</option>
+                            <option value="drop" selected>Drop rows with NaNs</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- MODEL CONFIGURATION -->
+                <div class="sidebar-section">
+                    <h3><i data-lucide="cpu"></i> Model Configuration</h3>
+                    
+                    <div class="form-group">
+                        <label for="task-select">Task Type</label>
+                        <select id="task-select" class="form-control">
+                            <option value="regression" selected>Tabular Regression</option>
+                            <option value="timeseries">Time Series Forecasting</option>
+                        </select>
+                    </div>
+
+                    <!-- REGRESSION CONFIGS -->
+                    <div id="regression-configs" class="task-config-panel">
+                        <div class="form-group">
+                            <label for="reg-model-select">Algorithm</label>
+                            <select id="reg-model-select" class="form-control">
+                                <option value="linear" selected>Linear Regression</option>
+                                <option value="ridge">Ridge Regression (L2)</option>
+                                <option value="random_forest">Random Forest Regressor</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reg-target-select">Target Variable (y)</label>
+                            <select id="reg-target-select" class="form-control">
+                                <option value="" disabled selected>Select y...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Feature Variables (X)</label>
+                            <div class="features-checklist" id="reg-features-list">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+
+                        <div class="form-group slide-control" id="ridge-alpha-group" style="display: none;">
+                            <div class="label-val">
+                                <label for="ridge-alpha">Regularization (Alpha)</label>
+                                <span id="ridge-alpha-val">1.0</span>
+                            </div>
+                            <input type="range" id="ridge-alpha" min="0.1" max="20" step="0.1" value="1.0" class="slider">
+                        </div>
+
+                        <div class="form-group slide-control" id="rf-estimators-group" style="display: none;">
+                            <div class="label-val">
+                                <label for="rf-estimators">Estimators (Trees)</label>
+                                <span id="rf-estimators-val">100</span>
+                            </div>
+                            <input type="range" id="rf-estimators" min="10" max="300" step="10" value="100" class="slider">
+                        </div>
+                    </div>
+
+                    <!-- TIME SERIES CONFIGS -->
+                    <div id="timeseries-configs" class="task-config-panel" style="display: none;">
+                        <div class="form-group">
+                            <label for="ts-model-select">Algorithm</label>
+                            <select id="ts-model-select" class="form-control">
+                                <option value="arima" selected>ARIMA</option>
+                                <option value="exponential_smoothing">Holt-Winters Exp Smoothing</option>
+                                <option value="moving_average">Simple Moving Average</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ts-date-select">Date/Time Column</label>
+                            <select id="ts-date-select" class="form-control">
+                                <option value="" disabled selected>Select Date...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ts-target-select">Target Column (Value)</label>
+                            <select id="ts-target-select" class="form-control">
+                                <option value="" disabled selected>Select Value...</option>
+                            </select>
+                        </div>
+
+                        <!-- ARIMA Parameters -->
+                        <div id="arima-params" class="ts-params-subpanel">
+                            <div class="param-grid">
+                                <div class="form-group">
+                                    <label for="arima-p">p (AR)</label>
+                                    <input type="number" id="arima-p" class="form-control compact" value="1" min="0" max="5">
+                                </div>
+                                <div class="form-group">
+                                    <label for="arima-d">d (I)</label>
+                                    <input type="number" id="arima-d" class="form-control compact" value="1" min="0" max="2">
+                                </div>
+                                <div class="form-group">
+                                    <label for="arima-q">q (MA)</label>
+                                    <input type="number" id="arima-q" class="form-control compact" value="1" min="0" max="5">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- HW Params -->
+                        <div id="hw-params" class="ts-params-subpanel" style="display: none;">
+                            <div class="form-group">
+                                <label for="hw-trend">Trend Component</label>
+                                <select id="hw-trend" class="form-control">
+                                    <option value="add" selected>Additive</option>
+                                    <option value="mul">Multiplicative</option>
+                                    <option value="none">None</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="hw-seasonal">Seasonal Component</label>
+                                <select id="hw-seasonal" class="form-control">
+                                    <option value="add">Additive</option>
+                                    <option value="mul">Multiplicative</option>
+                                    <option value="none" selected>None</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="hw-sp-group" style="display: none;">
+                                <label for="hw-sp">Seasonal Periods</label>
+                                <input type="number" id="hw-sp" class="form-control" value="12" min="2">
+                            </div>
+                        </div>
+
+                        <!-- SMA Params -->
+                        <div id="sma-params" class="ts-params-subpanel" style="display: none;">
+                            <div class="form-group">
+                                <label for="sma-window">Rolling Window Size</label>
+                                <input type="number" id="sma-window" class="form-control" value="3" min="2">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ts-forecast-horizon">Forecast Horizon (Periods)</label>
+                            <input type="number" id="ts-forecast-horizon" class="form-control" value="12" min="1" max="60">
+                        </div>
+                    </div>
+
+                    <button id="train-btn" class="btn btn-primary" disabled>
+                        <i data-lucide="play-circle"></i> Train Predictive Model
+                    </button>
+                </div>
+            </aside>
+
+            <!-- MAIN PANEL: DATA & OUTPUT VISUALIZATION -->
+            <main class="main-content">
+                <!-- TABS HEADER -->
+                <div class="tabs-header">
+                    <button class="tab-btn active" data-tab="data-explorer">
+                        <i data-lucide="table"></i> Data Explorer
+                    </button>
+                    <button class="tab-btn" data-tab="regression-results" id="tab-reg-btn">
+                        <i data-lucide="activity"></i> Regression Model Studio
+                    </button>
+                    <button class="tab-btn" data-tab="timeseries-results" id="tab-ts-btn">
+                        <i data-lucide="trending-up"></i> Time Series Studio
+                    </button>
+                </div>
+
+                <!-- TABS CONTAINER -->
+                <div class="tabs-container">
+                    
+                    <!-- TAB 1: DATA EXPLORER -->
+                    <div class="tab-content active" id="data-explorer">
+                        <div class="data-summary-row">
+                            <div class="metric-card shadow-sm">
+                                <i data-lucide="rows-3" class="metric-icon purple"></i>
+                                <div class="metric-info">
+                                    <h4 id="stat-rows">-</h4>
+                                    <p>Total Records</p>
+                                </div>
+                            </div>
+                            <div class="metric-card shadow-sm">
+                                <i data-lucide="columns-3" class="metric-icon blue"></i>
+                                <div class="metric-info">
+                                    <h4 id="stat-cols">-</h4>
+                                    <p>Total Variables</p>
+                                </div>
+                            </div>
+                            <div class="metric-card shadow-sm">
+                                <i data-lucide="alert-circle" class="metric-icon red"></i>
+                                <div class="metric-info">
+                                    <h4 id="stat-missing">-</h4>
+                                    <p>Missing Values</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-panel">
+                            <h3><i data-lucide="info"></i> Dataset Schema & Summary Statistics</h3>
+                            <div class="table-container">
+                                <table id="schema-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Column Name</th>
+                                            <th>Data Type</th>
+                                            <th>Null Count</th>
+                                            <th>Unique Values</th>
+                                            <th>Mean</th>
+                                            <th>Min</th>
+                                            <th>Max</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="7" class="text-center">Select or upload a dataset to start.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card-panel">
+                            <h3><i data-lucide="file-spreadsheet"></i> Dataset Preview (First 10 Rows)</h3>
+                            <div class="table-container">
+                                <table id="preview-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Preview</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-center">No dataset loaded.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: REGRESSION RESULTS -->
+                    <div class="tab-content" id="regression-results">
+                        <div class="model-meta-bar" id="reg-meta-bar">
+                            <span class="badge" id="reg-badge-model">No Model Trained</span>
+                            <span class="badge secondary" id="reg-badge-dataset">-</span>
+                        </div>
+
+                        <!-- METRICS GRID -->
+                        <div class="metrics-grid">
+                            <div class="metric-card glow-blue">
+                                <div class="metric-info">
+                                    <p>R-Squared (R²)</p>
+                                    <h2 id="metric-r2">-</h2>
+                                    <small id="metric-r2-train">Train: -</small>
+                                </div>
+                                <i data-lucide="percent" class="card-glow-icon"></i>
+                            </div>
+                            <div class="metric-card glow-purple">
+                                <div class="metric-info">
+                                    <p>Mean Absolute Error (MAE)</p>
+                                    <h2 id="metric-mae">-</h2>
+                                    <small id="metric-mae-train">Train: -</small>
+                                </div>
+                                <i data-lucide="divide" class="card-glow-icon"></i>
+                            </div>
+                            <div class="metric-card glow-mint">
+                                <div class="metric-info">
+                                    <p>Root Mean Squared Error (RMSE)</p>
+                                    <h2 id="metric-rmse">-</h2>
+                                    <small id="metric-rmse-train">Train: -</small>
+                                </div>
+                                <i data-lucide="target" class="card-glow-icon"></i>
+                            </div>
+                        </div>
+
+                        <!-- CHARTS GRID -->
+                        <div class="charts-grid">
+                            <div class="card-panel chart-box">
+                                <h3><i data-lucide="scatter-chart"></i> Actual vs. Predicted values (Test Split)</h3>
+                                <div class="chart-wrapper">
+                                    <canvas id="reg-scatter-chart"></canvas>
+                                </div>
+                            </div>
+                            <div class="card-panel chart-box">
+                                <h3><i data-lucide="bar-chart-3"></i> Feature Importance / Coefficients</h3>
+                                <div class="chart-wrapper">
+                                    <canvas id="reg-importance-chart"></canvas>
+                                </div>
+                            </div>
+                            <div class="card-panel chart-box full-width">
+                                <h3><i data-lucide="bar-chart-2"></i> Residuals Distribution (Errors)</h3>
+                                <div class="chart-wrapper">
+                                    <canvas id="reg-residual-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: TIME SERIES RESULTS -->
+                    <div class="tab-content" id="timeseries-results">
+                        <div class="model-meta-bar" id="ts-meta-bar">
+                            <span class="badge" id="ts-badge-model">No Model Trained</span>
+                            <span class="badge secondary" id="ts-badge-dataset">-</span>
+                        </div>
+
+                        <!-- TS METRICS -->
+                        <div class="metrics-grid ts-metrics">
+                            <div class="metric-card glow-blue">
+                                <div class="metric-info">
+                                    <p>Mean Absolute Percentage Error (MAPE)</p>
+                                    <h2 id="ts-metric-mape">-</h2>
+                                    <small>On validation period</small>
+                                </div>
+                                <i data-lucide="percent" class="card-glow-icon"></i>
+                            </div>
+                            <div class="metric-card glow-purple">
+                                <div class="metric-info">
+                                    <p>Mean Absolute Error (MAE)</p>
+                                    <h2 id="ts-metric-mae">-</h2>
+                                    <small>On validation period</small>
+                                </div>
+                                <i data-lucide="divide" class="card-glow-icon"></i>
+                            </div>
+                            <div class="metric-card glow-mint">
+                                <div class="metric-info">
+                                    <p>Root Mean Squared Error (RMSE)</p>
+                                    <h2 id="ts-metric-rmse">-</h2>
+                                    <small>On validation period</small>
+                                </div>
+                                <i data-lucide="target" class="card-glow-icon"></i>
+                            </div>
+                        </div>
+
+                        <!-- TS CHART -->
+                        <div class="card-panel full-width">
+                            <h3><i data-lucide="trending-up"></i> Historical Sales vs. Forecast Projections</h3>
+                            <div class="chart-wrapper large-chart">
+                                <canvas id="ts-forecast-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- LOADING SPINNER MODAL -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner-box">
+            <div class="spinner"></div>
+            <p id="loading-text">Fitting model and computing analytics...</p>
+        </div>
+    </div>
+
+    <!-- JS Logic -->
+    <script src="/static/app.js"></script>
+    <script>
+        // Init Lucide Icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
